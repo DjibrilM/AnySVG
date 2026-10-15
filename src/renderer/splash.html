@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AnySVG</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      background: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #e4e4e7;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      -webkit-app-region: drag;
+    }
+
+    .splash-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      width: 240px;
+    }
+
+    .app-icon {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+      border-radius: 18px;
+      margin-bottom: 16px;
+      filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.5));
+    }
+
+    .app-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #ffffff;
+      letter-spacing: -0.3px;
+      margin-bottom: 20px;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 9999px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 10%;
+      background: #ffffff;
+      border-radius: 9999px;
+      transition: width 0.35s ease-out;
+    }
+
+    .status-text {
+      font-size: 11px;
+      color: #a1a1aa;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="splash-container">
+    <img src="./src/assets/icon.png" alt="AnySVG" class="app-icon" />
+    <h1 class="app-title">AnySVG</h1>
+
+    <div class="progress-track">
+      <div id="progress-bar" class="progress-bar"></div>
+    </div>
+
+    <span id="status-text" class="status-text">Starting...</span>
+  </div>
+
+  <script>
+    const bar = document.getElementById('progress-bar');
+    const statusText = document.getElementById('status-text');
+
+    function updateProgress(percent, message) {
+      if (bar) bar.style.width = Math.min(100, Math.max(5, percent)) + '%';
+      if (statusText && message) statusText.textContent = message;
+    }
+
+    if (window.api && typeof window.api.onInitProgress === 'function') {
+      window.api.onInitProgress((data) => {
+        if (data && typeof data.progress === 'number') {
+          updateProgress(data.progress, data.message || '');
+        }
+      });
+    }
+  </script>
+</body>
+</html>

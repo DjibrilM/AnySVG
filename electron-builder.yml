@@ -1,0 +1,65 @@
+appId: com.anysvg.studio
+productName: AnySVG
+directories:
+  output: dist_electron
+  buildResources: build
+
+files:
+  - out/**/*
+  - build/icon.png
+  - "!src/**"
+  - "!**/*.svg"
+  - "!png_output/**"
+
+asar: true
+asarUnpack:
+  - node_modules/sharp/**/*
+  - node_modules/@img/**/*
+  - node_modules/detect-libc/**/*
+  - node_modules/semver/**/*
+
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+    - target: zip
+      arch:
+        - arm64
+        - x64
+  category: public.app-category.graphics-design
+  icon: build/icon.icns
+  artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+  identity: null
+
+dmg:
+  title: ${productName} ${version}
+  icon: build/icon.icns
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+  window:
+    width: 540
+    height: 380
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  artifactName: ${productName}-Setup-${version}.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: AnySVG
