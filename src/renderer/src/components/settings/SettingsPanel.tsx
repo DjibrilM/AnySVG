@@ -1,7 +1,7 @@
 import React from 'react';
 import { Sliders } from 'lucide-react';
 import type { SvgFile } from '../../lib/interfaces/svg';
-import type { ConvertResult } from '../../lib/interfaces/conversion';
+import type { ConvertResult, CompressionMode, ResolutionPreset } from '../../lib/interfaces/conversion';
 import { formatMegapixels } from '../../lib/utilities/formatters';
 
 import { ScaleSelector } from './ScaleSelector';
@@ -19,6 +19,8 @@ export interface SettingsPanelProps {
   activeFile?: SvgFile | null;
   scale?: number;
   onScaleChange: (scale: number) => void;
+  preset?: ResolutionPreset;
+  onPresetChange: (preset: ResolutionPreset) => void;
   customWidth?: number | null;
   customHeight?: number | null;
   onDimensionsChange: (w: number, h: number) => void;
@@ -28,8 +30,8 @@ export interface SettingsPanelProps {
   onBgColorChange: (color: string) => void;
   format?: 'png' | 'jpeg';
   onFormatChange: (fmt: 'png' | 'jpeg') => void;
-  compression?: 'max' | 'quant' | 'fast';
-  onCompressionChange: (comp: 'max' | 'quant' | 'fast') => void;
+  compression?: CompressionMode;
+  onCompressionChange: (comp: CompressionMode) => void;
   isConverting: boolean;
   onConvertSingle: () => void;
   isConvertingAll?: boolean;
@@ -52,6 +54,8 @@ export function SettingsPanel({
   activeFile,
   scale = 4,
   onScaleChange,
+  preset = 'native',
+  onPresetChange,
   customWidth,
   customHeight,
   onDimensionsChange,
@@ -61,7 +65,7 @@ export function SettingsPanel({
   onBgColorChange,
   format = 'png',
   onFormatChange,
-  compression = 'max',
+  compression = 'none',
   onCompressionChange,
   isConverting,
   onConvertSingle,
@@ -94,8 +98,13 @@ export function SettingsPanel({
 
       {/* Settings Body */}
       <div className="settings-body">
-        {/* Scale Multipliers */}
-        <ScaleSelector scale={scale} onScaleChange={onScaleChange} />
+        {/* Scale Multipliers & Resolution Presets */}
+        <ScaleSelector
+          scale={scale}
+          onScaleChange={onScaleChange}
+          preset={preset}
+          onPresetChange={onPresetChange}
+        />
 
         {/* Custom Width & Height Inputs with Aspect Ratio Lock */}
         <DimensionInputs
@@ -129,6 +138,7 @@ export function SettingsPanel({
           scale={scale}
           megaPixels={megaPixels}
           compression={compression}
+          preset={preset}
         />
 
         {/* Destination Folder */}
@@ -148,6 +158,10 @@ export function SettingsPanel({
         activeFile={activeFile}
         format={format}
         scale={scale}
+        compression={compression}
+        preset={preset}
+        customWidth={customWidth}
+        customHeight={customHeight}
         isConverting={isConverting}
         onConvertSingle={onConvertSingle}
         isConvertingAll={isConvertingAll}

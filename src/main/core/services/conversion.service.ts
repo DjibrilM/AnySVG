@@ -5,7 +5,7 @@ import sharp from 'sharp';
 import JSZip from 'jszip';
 import type { SystemService } from './system.service';
 import type { DirectoryService } from './directory.service';
-import { findChromiumBrowser, rasterizeSingleSvg } from '../convert';
+import { findChromiumBrowser, rasterizeSingleSvg, parseSvgDimensions } from '../convert';
 import { ChromiumRasterizer } from './chromium-rasterizer.service';
 
 export interface ConvertOptions {
@@ -15,7 +15,8 @@ export interface ConvertOptions {
   height?: number | null;
   bg?: string;
   format?: 'png' | 'jpeg';
-  compression?: 'max' | 'quant' | 'fast';
+  compression?: 'none' | 'max' | 'quant' | 'fast';
+  preset?: string;
 }
 
 export interface ConvertResult {
@@ -32,9 +33,12 @@ export interface ConvertResult {
 export interface BatchConvertOptions {
   files?: string[];
   scale?: number;
+  width?: number | null;
+  height?: number | null;
   bg?: string;
   format?: 'png' | 'jpeg';
-  compression?: 'max' | 'quant' | 'fast';
+  compression?: 'none' | 'max' | 'quant' | 'fast';
+  preset?: string;
 }
 
 export interface BatchConvertResult {
@@ -93,15 +97,122 @@ export class ConversionService {
   }
 
   /**
+   * Calculate proportional target width and height according to requested preset or scale
+   */
+  public computeDimensionsForFile(
+    fileDimensions: { width: number; height: number },
+    options: {
+      scale?: number;
+      width?: number | null;
+      height?: number | null;
+      preset?: string;
+    }
+  ): { targetW: number; targetH: number; tag: string } {
+    const origW = fileDimensions.width || 800;
+    const origH = fileDimensions.height || 600;
+    const scale = options.scale ?? 4;
+    const preset = options.preset;
+
+    if (preset && preset !== 'custom' && preset !== 'native') {
+      let targetLongEdge = 3840;
+      let tag = preset.toUpperCase();
+      switch (preset.toLowerCase()) {
+        case '1080p':
+          targetLongEdge = 1920;
+          tag = '1080p';
+          break;
+        case '2k':
+          targetLongEdge = 2560;
+          tag = '2K';
+          break;
+        case '4k':
+          targetLongEdge = 3840;
+          tag = '4K';
+          break;
+        case '8k':
+          targetLongEdge = 7680;
+          tag = '8K';
+          break;
+        case '16k':
+          targetLongEdge = 15360;
+          tag = '16K';
+          break;
+      }
+
+      if (origW >= origH) {
+        const targetW = targetLongEdge;
+        const targetH = Math.max(1, Math.round((origH / origW) * targetLongEdge));
+        return { targetW, targetH, tag };
+      } else {
+        const targetH = targetLongEdge;
+        const targetW = Math.max(1, Math.round((origW / origH) * targetLongEdge));
+        return { targetW, targetH, tag };
+      }
+    }
+
+    if (options.width && options.height) {
+      let tag = `${options.width}x${options.height}`;
+      const maxEdge = Math.max(options.width, options.height);
+      if (maxEdge >= 15000) tag = '16K';
+      else if (maxEdge >= 7000) tag = '8K';
+      else if (maxEdge >= 3600) tag = '4K';
+      else if (maxEdge >= 2400) tag = '2K';
+      else if (maxEdge >= 1800) tag = '1080p';
+      return { targetW: options.width, targetH: options.height, tag };
+    }
+
+    if (options.width && !options.height) {
+      const targetW = options.width;
+      const targetH = Math.max(1, Math.round((origH / origW) * options.width));
+      return { targetW, targetH, tag: `${targetW}x${targetH}` };
+    }
+
+    if (options.height && !options.width) {
+      const targetH = options.height;
+      const targetW = Math.max(1, Math.round((origW / origH) * options.height));
+      return { targetW, targetH, tag: `${targetW}x${targetH}` };
+    }
+
+    const targetW = Math.max(1, Math.round(origW * scale));
+    const targetH = Math.max(1, Math.round(origH * scale));
+    return { targetW, targetH, tag: `${scale}x` };
+  }
+
+  /**
    * Apply deep secondary compression via Sharp (mozjpeg / pngquant / level-9 deflate)
+   * or export uncompressed with full 32-bit RGBA bit depth / JPEG 100% 4:4:4.
    */
   private async compressWithSharp(
     rawPath: string,
     finalPath: string,
     isJpeg: boolean,
-    compression: 'max' | 'quant' | 'fast'
+    compression: 'none' | 'max' | 'quant' | 'fast'
   ): Promise<{ finalStat: fs.Stats; savings: number; buffer: Buffer }> {
     const rawStat = fs.statSync(rawPath);
+
+    if (compression === 'none') {
+      if (isJpeg) {
+        // Full fidelity JPEG: 100% quality with 4:4:4 chroma subsampling (no color resolution loss)
+        const pipeline = sharp(rawPath).jpeg({ quality: 100, chromaSubsampling: '4:4:4' });
+        const buffer = await pipeline.toBuffer();
+        fs.writeFileSync(finalPath, buffer);
+        if (finalPath !== rawPath && fs.existsSync(rawPath)) {
+          try { fs.unlinkSync(rawPath); } catch {}
+        }
+        const finalStat = fs.statSync(finalPath);
+        return { finalStat, savings: 0, buffer };
+      } else {
+        // Pure uncompressed PNG: directly preserve raw lossless Chromium 32-bit RGBA raster
+        if (finalPath !== rawPath) {
+          fs.copyFileSync(rawPath, finalPath);
+          try { fs.unlinkSync(rawPath); } catch {}
+        }
+        const finalStat = fs.statSync(finalPath);
+        const buffer = fs.readFileSync(finalPath);
+        return { finalStat, savings: 0, buffer };
+      }
+    }
+
     let pipeline = sharp(rawPath);
 
     if (isJpeg) {
@@ -138,7 +249,8 @@ export class ConversionService {
         height = null,
         bg = 'transparent',
         format = 'png',
-        compression = 'max'
+        compression = 'none',
+        preset
       } = options;
 
       const root = this.systemService.getWorkspaceDir();
@@ -149,9 +261,28 @@ export class ConversionService {
       if (!fs.existsSync(svgPath)) throw new Error('Source SVG file not found');
 
       const baseName = path.basename(safeFile, path.extname(safeFile));
+      const svgContent = fs.readFileSync(svgPath, 'utf8');
+      const dims = parseSvgDimensions(svgContent);
+
+      const { targetW, targetH, tag } = this.computeDimensionsForFile(dims, {
+        scale,
+        width,
+        height,
+        preset
+      });
+
+      const isJpeg = format.toLowerCase() === 'jpeg' || format.toLowerCase() === 'jpg';
+      const finalExt = isJpeg ? 'jpg' : 'png';
+      const finalFileName = `${baseName}_${tag}.${finalExt}`;
+      const finalPath = path.join(outDir, finalFileName);
+
+      // If exporting uncompressed PNG, rasterize directly to finalPath to eliminate temp file & re-compression
+      const isDirectUncompressedPng = !isJpeg && compression === 'none';
+      const rawPath = isDirectUncompressedPng
+        ? finalPath
+        : path.join(outDir, `.__temp_raw_${process.pid}_${Date.now()}.png`);
 
       // Stage 1: Vector Rasterization via persistent Chromium instance
-      let rawPath: string;
       if (!this.rasterizer.getIsReady()) {
         await this.rasterizer.start();
       }
@@ -159,35 +290,37 @@ export class ConversionService {
       if (this.rasterizer.getIsReady()) {
         const res = await this.rasterizer.rasterize(svgPath, {
           scale,
-          width,
-          height,
+          width: targetW,
+          height: targetH,
           bg,
-          outDir
+          outDir,
+          outPath: rawPath
         });
         if (!res.success) throw new Error(res.error || 'Vector rasterization failed');
-        rawPath = res.outPath;
       } else {
         const browserPath = this.getBrowserPath();
         const rasterResult = rasterizeSingleSvg(svgPath, {
           browserPath,
           scale,
-          width,
-          height,
+          width: targetW,
+          height: targetH,
           bg,
-          outDir
+          outDir,
+          outPath: rawPath
         });
         if (!rasterResult.success) throw new Error(rasterResult.error || 'Rasterization failed');
-        rawPath = rasterResult.outPath;
       }
 
       const rawStat = fs.statSync(rawPath);
-      const isJpeg = format.toLowerCase() === 'jpeg' || format.toLowerCase() === 'jpg';
-      const finalExt = isJpeg ? 'jpg' : 'png';
-      const finalFileName = `${baseName}_${scale}x.${finalExt}`;
-      const finalPath = path.join(outDir, finalFileName);
+      let finalStat = rawStat;
+      let savings = 0;
 
-      // Stage 2: Deep secondary compression via Sharp
-      const { finalStat, savings } = await this.compressWithSharp(rawPath, finalPath, isJpeg, compression);
+      // Stage 2: Compression via Sharp if not direct uncompressed PNG
+      if (!isDirectUncompressedPng) {
+        const compressRes = await this.compressWithSharp(rawPath, finalPath, isJpeg, compression);
+        finalStat = compressRes.finalStat;
+        savings = compressRes.savings;
+      }
 
       return {
         success: true,
@@ -211,9 +344,12 @@ export class ConversionService {
       const {
         files: requestedFiles,
         scale = 4,
+        width = null,
+        height = null,
         bg = 'transparent',
         format = 'png',
-        compression = 'max'
+        compression = 'none',
+        preset
       } = options;
 
       const root = this.systemService.getWorkspaceDir();
@@ -264,40 +400,67 @@ export class ConversionService {
         try {
           const baseName = path.basename(file, path.extname(file));
           const svgFilePath = path.isAbsolute(file) ? file : path.join(root, path.basename(file));
+          const svgContent = fs.readFileSync(svgFilePath, 'utf8');
+          const dims = parseSvgDimensions(svgContent);
+
+          const { targetW, targetH, tag } = this.computeDimensionsForFile(dims, {
+            scale,
+            width,
+            height,
+            preset
+          });
+
+          const outName = `${baseName}_${tag}.${ext}`;
+          const outPath = path.join(outDir, outName);
+          const isDirectUncompressedPng = !isJpeg && compression === 'none';
+          const rawPath = isDirectUncompressedPng
+            ? outPath
+            : path.join(outDir, `.__temp_raw_${process.pid}_${i}_${Date.now()}.png`);
 
           // Stage 1: Vector Rasterization via persistent Chromium instance
-          let rawPath: string;
           if (this.rasterizer.getIsReady()) {
             const res = await this.rasterizer.rasterize(svgFilePath, {
               scale,
+              width: targetW,
+              height: targetH,
               bg,
-              outDir
+              outDir,
+              outPath: rawPath
             });
             if (!res.success) throw new Error(res.error || `Rasterization failed for ${file}`);
-            rawPath = res.outPath;
           } else {
             const rasterResult = rasterizeSingleSvg(svgFilePath, {
               browserPath,
               scale,
+              width: targetW,
+              height: targetH,
               bg,
-              outDir
+              outDir,
+              outPath: rawPath
             });
             if (!rasterResult.success) throw new Error(rasterResult.error || `Rasterization failed for ${file}`);
-            rawPath = rasterResult.outPath;
           }
+
           const rawStat = fs.statSync(rawPath);
           totalOriginal += rawStat.size;
 
-          const outName = `${baseName}_${scale}x.${ext}`;
-          const outPath = path.join(outDir, outName);
+          let finalStat = rawStat;
+          let savings = 0;
+          let buffer: Buffer;
 
-          // Stage 2: Deep secondary compression via Sharp
-          const { finalStat, savings, buffer } = await this.compressWithSharp(
-            rawPath,
-            outPath,
-            isJpeg,
-            compression
-          );
+          if (isDirectUncompressedPng) {
+            buffer = fs.readFileSync(outPath);
+          } else {
+            const compressRes = await this.compressWithSharp(
+              rawPath,
+              outPath,
+              isJpeg,
+              compression
+            );
+            finalStat = compressRes.finalStat;
+            savings = compressRes.savings;
+            buffer = compressRes.buffer;
+          }
 
           totalCompressed += buffer.length;
           zip.file(outName, buffer);
@@ -331,8 +494,11 @@ export class ConversionService {
         onProgress({ current: total, total, status: 'zipping' });
       }
 
-      // Generate batch ZIP archive
-      const zipFileName = `anysvg_exports_${scale}x_${Date.now()}.zip`;
+      // Generate batch ZIP archive with informative tag
+      const batchTag = preset && preset !== 'custom' && preset !== 'native'
+        ? preset.toUpperCase()
+        : (width && height ? `${width}x${height}` : `${scale}x`);
+      const zipFileName = `anysvg_exports_${batchTag}_${Date.now()}.zip`;
       const zipFilePath = path.join(outDir, zipFileName);
       const zipBuffer = await zip.generateAsync({
         type: 'nodebuffer',
