@@ -1,5 +1,4 @@
 export type CompressionMode = 'none' | 'max' | 'quant' | 'fast';
-export type ResolutionPreset = 'native' | '1080p' | '2k' | '4k' | '8k' | '16k' | 'custom';
 
 export interface ConvertOptions {
   filename: string;
@@ -9,7 +8,6 @@ export interface ConvertOptions {
   bg?: string;
   format?: 'png' | 'jpeg';
   compression?: CompressionMode;
-  preset?: ResolutionPreset;
 }
 
 export interface ConvertResult {
@@ -31,7 +29,6 @@ export interface BatchConvertOptions {
   bg?: string;
   format?: 'png' | 'jpeg';
   compression?: CompressionMode;
-  preset?: ResolutionPreset;
 }
 
 export interface BatchProgressData {
@@ -64,7 +61,6 @@ export interface ConversionState {
   bgColor: string;
   format: 'png' | 'jpeg';
   compression: CompressionMode;
-  preset: ResolutionPreset;
   isConverting: boolean;
   isConvertingAll: boolean;
   convertAllProgress: {
@@ -77,4 +73,3 @@ export interface ConversionState {
   lastZipUrl: string | null;
   conversionResults: Record<string, ConvertResult>;
 }
-
