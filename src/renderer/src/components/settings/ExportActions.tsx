@@ -1,7 +1,7 @@
 import React from 'react';
 import { Download, Loader2, Archive, FolderOpen } from 'lucide-react';
 import type { SvgFile } from '../../lib/interfaces/svg';
-import type { CompressionMode, ResolutionPreset } from '../../lib/interfaces/conversion';
+import type { CompressionMode } from '../../lib/interfaces/conversion';
 
 interface ExportActionsProps {
   files?: SvgFile[];
@@ -9,9 +9,6 @@ interface ExportActionsProps {
   format: 'png' | 'jpeg';
   scale: number;
   compression?: CompressionMode;
-  preset?: ResolutionPreset;
-  customWidth?: number | null;
-  customHeight?: number | null;
   isConverting: boolean;
   onConvertSingle: () => void;
   isConvertingAll?: boolean;
@@ -31,10 +28,7 @@ export function ExportActions({
   activeFile,
   format,
   scale,
-  compression = 'none',
-  preset = 'native',
-  customWidth,
-  customHeight,
+  compression,
   isConverting,
   onConvertSingle,
   isConvertingAll = false,
@@ -43,20 +37,7 @@ export function ExportActions({
   lastZipUrl,
   onOpenFolder
 }: ExportActionsProps): React.JSX.Element {
-  let resolutionTag = `${scale.toFixed(scale % 1 === 0 ? 0 : 1)}x`;
-  if (preset && preset !== 'custom' && preset !== 'native') {
-    resolutionTag = preset.toUpperCase();
-  } else if (customWidth && customHeight) {
-    const maxEdge = Math.max(customWidth, customHeight);
-    if (maxEdge >= 15000) resolutionTag = '16K';
-    else if (maxEdge >= 7000) resolutionTag = '8K';
-    else if (maxEdge >= 3600) resolutionTag = '4K';
-    else if (maxEdge >= 2400) resolutionTag = '2K';
-    else if (maxEdge >= 1800) resolutionTag = '1080p';
-  }
-
-  const uncompressedTag = compression === 'none' ? ' • RAW' : '';
-  const exportLabel = `Export ${format.toUpperCase()} (${resolutionTag}${uncompressedTag})`;
+  const rawTag = compression === 'none' ? ' • RAW' : '';
 
   return (
     <div className="settings-footer" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -86,7 +67,7 @@ export function ExportActions({
         ) : (
           <>
             <Download size={15} />
-            <span>{exportLabel}</span>
+            <span>Export {format.toUpperCase()} ({scale}x{rawTag})</span>
           </>
         )}
       </button>
@@ -122,7 +103,7 @@ export function ExportActions({
           ) : (
             <>
               <Archive size={14} />
-              <span>Export All ({files.length}) as ZIP ({resolutionTag})</span>
+              <span>Export All ({files.length}) as ZIP ({scale}x)</span>
             </>
           )}
         </button>

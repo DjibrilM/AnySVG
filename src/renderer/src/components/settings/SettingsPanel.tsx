@@ -1,7 +1,7 @@
 import React from 'react';
 import { Sliders } from 'lucide-react';
 import type { SvgFile } from '../../lib/interfaces/svg';
-import type { ConvertResult, CompressionMode, ResolutionPreset } from '../../lib/interfaces/conversion';
+import type { ConvertResult, CompressionMode } from '../../lib/interfaces/conversion';
 import { formatMegapixels } from '../../lib/utilities/formatters';
 
 import { ScaleSelector } from './ScaleSelector';
@@ -19,8 +19,6 @@ export interface SettingsPanelProps {
   activeFile?: SvgFile | null;
   scale?: number;
   onScaleChange: (scale: number) => void;
-  preset?: ResolutionPreset;
-  onPresetChange: (preset: ResolutionPreset) => void;
   customWidth?: number | null;
   customHeight?: number | null;
   onDimensionsChange: (w: number, h: number) => void;
@@ -54,8 +52,6 @@ export function SettingsPanel({
   activeFile,
   scale = 4,
   onScaleChange,
-  preset = 'native',
-  onPresetChange,
   customWidth,
   customHeight,
   onDimensionsChange,
@@ -98,13 +94,8 @@ export function SettingsPanel({
 
       {/* Settings Body */}
       <div className="settings-body">
-        {/* Scale Multipliers & Resolution Presets */}
-        <ScaleSelector
-          scale={scale}
-          onScaleChange={onScaleChange}
-          preset={preset}
-          onPresetChange={onPresetChange}
-        />
+        {/* Scale Multipliers */}
+        <ScaleSelector scale={scale} onScaleChange={onScaleChange} />
 
         {/* Custom Width & Height Inputs with Aspect Ratio Lock */}
         <DimensionInputs
@@ -138,7 +129,6 @@ export function SettingsPanel({
           scale={scale}
           megaPixels={megaPixels}
           compression={compression}
-          preset={preset}
         />
 
         {/* Destination Folder */}
@@ -159,9 +149,6 @@ export function SettingsPanel({
         format={format}
         scale={scale}
         compression={compression}
-        preset={preset}
-        customWidth={customWidth}
-        customHeight={customHeight}
         isConverting={isConverting}
         onConvertSingle={onConvertSingle}
         isConvertingAll={isConvertingAll}
