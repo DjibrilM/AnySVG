@@ -46,19 +46,22 @@ export function DimensionInputs({
     }
   };
 
+  const maxSlider = Math.max(16, Math.ceil(scale));
+  const displayScale = Number(scale.toFixed(2));
+
   return (
     <div className="custom-dims-box">
       <div className="slider-block">
         <div className="slider-header">
           <span className="slider-title">Scale Factor</span>
-          <span className="slider-num">{scale}x</span>
+          <span className="slider-num font-mono">{displayScale}x</span>
         </div>
         <input
           type="range"
           min="1"
-          max="8"
+          max={maxSlider}
           step="0.5"
-          value={scale}
+          value={Math.min(scale, maxSlider)}
           onChange={(e) => onScaleChange(parseFloat(e.target.value))}
           className="shadcn-slider"
         />
@@ -71,7 +74,9 @@ export function DimensionInputs({
             type="number"
             value={currentW}
             onChange={handleWidthInput}
-            className="shadcn-input"
+            className="shadcn-input font-mono"
+            min="1"
+            max="16384"
           />
         </div>
 
@@ -79,6 +84,7 @@ export function DimensionInputs({
           className={`aspect-btn ${aspectLocked ? 'active' : ''}`}
           onClick={onToggleAspectLock}
           title={aspectLocked ? 'Aspect Ratio Locked' : 'Aspect Ratio Unlocked'}
+          type="button"
         >
           {aspectLocked ? <Lock size={13} /> : <Unlock size={13} />}
         </button>
@@ -89,7 +95,9 @@ export function DimensionInputs({
             type="number"
             value={currentH}
             onChange={handleHeightInput}
-            className="shadcn-input"
+            className="shadcn-input font-mono"
+            min="1"
+            max="16384"
           />
         </div>
       </div>

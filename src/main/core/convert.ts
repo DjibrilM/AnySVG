@@ -107,6 +107,7 @@ export function rasterizeSingleSvg(
     height?: number | null;
     bg?: string;
     outDir: string;
+    outPath?: string;
   }
 ): RasterizeResult {
   const startTime = Date.now();
@@ -115,7 +116,7 @@ export function rasterizeSingleSvg(
   const outDir = options.outDir;
 
   const baseName = path.basename(filePath, path.extname(filePath));
-  const outPath = path.join(outDir, `${baseName}_${scale}x.png`);
+  const outPath = options.outPath || path.join(outDir, `${baseName}_${scale}x.png`);
 
   try {
     const svgContent = fs.readFileSync(filePath, 'utf8');

@@ -65,6 +65,8 @@ export class ChromiumRasterizer {
       height?: number | null;
       bg?: string;
       outDir: string;
+      outFileName?: string;
+      outPath?: string;
     }
   ): Promise<RasterizeOutput> {
     const startTime = Date.now();
@@ -73,7 +75,7 @@ export class ChromiumRasterizer {
     const outDir = options.outDir;
 
     const baseName = path.basename(svgFilePath, path.extname(svgFilePath));
-    const outPath = path.join(outDir, `${baseName}_${scale}x.png`);
+    const outPath = options.outPath || path.join(outDir, options.outFileName || `${baseName}_${scale}x.png`);
 
     let tempHtml: string | null = null;
 
