@@ -29,30 +29,19 @@ export function CompressionSelector({
     <div className="setting-item">
       <div className="setting-header-row">
         <span className="setting-label">Compression Engine</span>
-        <span
-          className="setting-tag"
-          style={{
-            color: compression === 'none' ? '#4ade80' : compression === 'quant' ? '#f59e0b' : '#38bdf8',
-            borderColor:
-              compression === 'none'
-                ? 'rgba(74, 222, 128, 0.3)'
-                : compression === 'quant'
-                  ? 'rgba(245, 158, 11, 0.3)'
-                  : 'rgba(56, 189, 248, 0.3)'
-          }}
-        >
-          {compression === 'none' ? 'Raw Full Res' : compression === 'quant' ? 'Lossy Palette' : 'Lossless Sharp'}
+        <span className="setting-tag">
+          {compression === 'none' ? 'Uncompressed' : compression === 'quant' ? '8-Bit Palette' : 'Lossless Sharp'}
         </span>
       </div>
 
       <div className="comp-grid">
         <button
-          className={`comp-btn ${compression === 'none' ? 'active active-raw' : ''}`}
+          className={`comp-btn ${compression === 'none' ? 'active' : ''}`}
           onClick={() => onCompressionChange('none')}
           title="Uncompressed Full Resolution (0% Compression Loss, 32-bit RGBA)"
         >
           <span>Uncompressed</span>
-          <span className="sub-pill pill-raw">RAW</span>
+          <span className="sub-pill">RAW</span>
         </button>
 
         <button
@@ -74,12 +63,12 @@ export function CompressionSelector({
         </button>
 
         <button
-          className={`comp-btn ${compression === 'quant' ? 'active active-quant' : ''}`}
+          className={`comp-btn ${compression === 'quant' ? 'active' : ''}`}
           onClick={() => onCompressionChange('quant')}
           title="TinyPNG 8-bit Quantization (High file savings, trades color resolution)"
         >
           <span>TinyPNG 8-bit</span>
-          <span className="sub-pill pill-quant">-70%</span>
+          <span className="sub-pill">-70%</span>
         </button>
       </div>
 

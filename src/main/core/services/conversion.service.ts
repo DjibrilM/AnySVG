@@ -16,7 +16,6 @@ export interface ConvertOptions {
   bg?: string;
   format?: 'png' | 'jpeg';
   compression?: 'none' | 'max' | 'quant' | 'fast';
-  preset?: string;
 }
 
 export interface ConvertResult {
@@ -38,7 +37,6 @@ export interface BatchConvertOptions {
   bg?: string;
   format?: 'png' | 'jpeg';
   compression?: 'none' | 'max' | 'quant' | 'fast';
-  preset?: string;
 }
 
 export interface BatchConvertResult {
@@ -97,7 +95,7 @@ export class ConversionService {
   }
 
   /**
-   * Calculate proportional target width and height according to requested preset or scale
+   * Calculate proportional target width and height according to scale or custom width/height
    */
   public computeDimensionsForFile(
     fileDimensions: { width: number; height: number },
@@ -105,60 +103,14 @@ export class ConversionService {
       scale?: number;
       width?: number | null;
       height?: number | null;
-      preset?: string;
     }
   ): { targetW: number; targetH: number; tag: string } {
     const origW = fileDimensions.width || 800;
     const origH = fileDimensions.height || 600;
     const scale = options.scale ?? 4;
-    const preset = options.preset;
-
-    if (preset && preset !== 'custom' && preset !== 'native') {
-      let targetLongEdge = 3840;
-      let tag = preset.toUpperCase();
-      switch (preset.toLowerCase()) {
-        case '1080p':
-          targetLongEdge = 1920;
-          tag = '1080p';
-          break;
-        case '2k':
-          targetLongEdge = 2560;
-          tag = '2K';
-          break;
-        case '4k':
-          targetLongEdge = 3840;
-          tag = '4K';
-          break;
-        case '8k':
-          targetLongEdge = 7680;
-          tag = '8K';
-          break;
-        case '16k':
-          targetLongEdge = 15360;
-          tag = '16K';
-          break;
-      }
-
-      if (origW >= origH) {
-        const targetW = targetLongEdge;
-        const targetH = Math.max(1, Math.round((origH / origW) * targetLongEdge));
-        return { targetW, targetH, tag };
-      } else {
-        const targetH = targetLongEdge;
-        const targetW = Math.max(1, Math.round((origW / origH) * targetLongEdge));
-        return { targetW, targetH, tag };
-      }
-    }
 
     if (options.width && options.height) {
-      let tag = `${options.width}x${options.height}`;
-      const maxEdge = Math.max(options.width, options.height);
-      if (maxEdge >= 15000) tag = '16K';
-      else if (maxEdge >= 7000) tag = '8K';
-      else if (maxEdge >= 3600) tag = '4K';
-      else if (maxEdge >= 2400) tag = '2K';
-      else if (maxEdge >= 1800) tag = '1080p';
-      return { targetW: options.width, targetH: options.height, tag };
+      return { targetW: options.width, targetH: options.height, tag: `${options.width}x${options.height}` };
     }
 
     if (options.width && !options.height) {
@@ -249,8 +201,7 @@ export class ConversionService {
         height = null,
         bg = 'transparent',
         format = 'png',
-        compression = 'none',
-        preset
+        compression = 'none'
       } = options;
 
       const root = this.systemService.getWorkspaceDir();
@@ -267,8 +218,7 @@ export class ConversionService {
       const { targetW, targetH, tag } = this.computeDimensionsForFile(dims, {
         scale,
         width,
-        height,
-        preset
+        height
       });
 
       const isJpeg = format.toLowerCase() === 'jpeg' || format.toLowerCase() === 'jpg';
@@ -348,8 +298,7 @@ export class ConversionService {
         height = null,
         bg = 'transparent',
         format = 'png',
-        compression = 'none',
-        preset
+        compression = 'none'
       } = options;
 
       const root = this.systemService.getWorkspaceDir();
@@ -406,8 +355,7 @@ export class ConversionService {
           const { targetW, targetH, tag } = this.computeDimensionsForFile(dims, {
             scale,
             width,
-            height,
-            preset
+            height
           });
 
           const outName = `${baseName}_${tag}.${ext}`;
@@ -494,11 +442,8 @@ export class ConversionService {
         onProgress({ current: total, total, status: 'zipping' });
       }
 
-      // Generate batch ZIP archive with informative tag
-      const batchTag = preset && preset !== 'custom' && preset !== 'native'
-        ? preset.toUpperCase()
-        : (width && height ? `${width}x${height}` : `${scale}x`);
-      const zipFileName = `anysvg_exports_${batchTag}_${Date.now()}.zip`;
+      // Generate batch ZIP archive
+      const zipFileName = `anysvg_exports_${scale}x_${Date.now()}.zip`;
       const zipFilePath = path.join(outDir, zipFileName);
       const zipBuffer = await zip.generateAsync({
         type: 'nodebuffer',

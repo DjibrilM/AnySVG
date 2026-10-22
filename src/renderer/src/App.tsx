@@ -30,8 +30,6 @@ export default function App(): React.JSX.Element {
     setFormat,
     compression,
     setCompression,
-    preset,
-    handlePresetChange,
     handleScaleChange,
     handleDimensionsChange,
     handleDimensionsReset,
@@ -134,8 +132,6 @@ export default function App(): React.JSX.Element {
           activeFile={activeFile}
           scale={scale}
           onScaleChange={handleScaleChange}
-          preset={preset}
-          onPresetChange={(p) => handlePresetChange(p, activeFile)}
           customWidth={customWidth}
           customHeight={customHeight}
           onDimensionsChange={handleDimensionsChange}

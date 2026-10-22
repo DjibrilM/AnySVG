@@ -5,8 +5,7 @@ import type {
   ConvertResult,
   BatchProgressData,
   ConversionState,
-  CompressionMode,
-  ResolutionPreset
+  CompressionMode
 } from '../interfaces/conversion';
 import { triggerDownload } from '../utilities/download';
 import { conversionService } from '../../core/services/conversion.service';
@@ -23,8 +22,7 @@ export const initialConversionState: ConversionState = {
   aspectLocked: true,
   bgColor: 'transparent',
   format: 'png',
-  compression: 'none', // Default to pristine uncompressed full-resolution fidelity
-  preset: 'native',
+  compression: 'none', // Default to uncompressed full-resolution fidelity
   isConverting: false,
   isConvertingAll: false,
   convertAllProgress: { current: 0, total: 0 },
@@ -70,67 +68,13 @@ export function useConversion({ isElectron, showToast }: UseConversionOptions) {
 
   // Reset dimensions
   const handleDimensionsReset = useCallback((): void => {
-    setState({ customWidth: null, customHeight: null, preset: 'native' });
-  }, []);
-
-  // Preset change handler (calculates target width/height based on active SVG)
-  const handlePresetChange = useCallback((preset: ResolutionPreset, activeFile?: SvgFile | null): void => {
-    if (preset === 'native') {
-      setState({
-        preset: 'native',
-        scale: 1,
-        customWidth: null,
-        customHeight: null
-      });
-      return;
-    }
-
-    let targetLongEdge = 3840;
-    switch (preset) {
-      case '1080p':
-        targetLongEdge = 1920;
-        break;
-      case '2k':
-        targetLongEdge = 2560;
-        break;
-      case '4k':
-        targetLongEdge = 3840;
-        break;
-      case '8k':
-        targetLongEdge = 7680;
-        break;
-      case '16k':
-        targetLongEdge = 15360;
-        break;
-      default:
-        targetLongEdge = 3840;
-    }
-
-    const origW = activeFile?.width || 800;
-    const origH = activeFile?.height || 600;
-
-    let newW = targetLongEdge;
-    let newH = Math.max(1, Math.round((origH / origW) * targetLongEdge));
-    if (origH > origW) {
-      newH = targetLongEdge;
-      newW = Math.max(1, Math.round((origW / origH) * targetLongEdge));
-    }
-
-    const newScale = Number((newW / origW).toFixed(2));
-
-    setState({
-      preset,
-      scale: newScale,
-      customWidth: newW,
-      customHeight: newH
-    });
+    setState({ customWidth: null, customHeight: null });
   }, []);
 
   // Scale change handler
   const handleScaleChange = useCallback((newScale: number): void => {
     setState({
       scale: newScale,
-      preset: newScale === 1 ? 'native' : 'custom',
       customWidth: null,
       customHeight: null
     });
@@ -140,8 +84,7 @@ export function useConversion({ isElectron, showToast }: UseConversionOptions) {
   const handleDimensionsChange = useCallback((w: number, h: number): void => {
     setState({
       customWidth: w,
-      customHeight: h,
-      preset: 'custom'
+      customHeight: h
     });
   }, []);
 
@@ -203,8 +146,7 @@ export function useConversion({ isElectron, showToast }: UseConversionOptions) {
         height: state.customHeight,
         bg: state.bgColor,
         format: state.format,
-        compression: state.compression,
-        preset: state.preset
+        compression: state.compression
       };
 
       const res = await conversionService.convert(payload);
@@ -257,8 +199,7 @@ export function useConversion({ isElectron, showToast }: UseConversionOptions) {
         height: state.customHeight,
         bg: state.bgColor,
         format: state.format,
-        compression: state.compression,
-        preset: state.preset
+        compression: state.compression
       };
 
       if (isElectron) {
@@ -303,8 +244,7 @@ export function useConversion({ isElectron, showToast }: UseConversionOptions) {
             height: state.customHeight,
             bg: state.bgColor,
             format: state.format,
-            compression: state.compression,
-            preset: state.preset
+            compression: state.compression
           };
 
           const res = await fetch('/api/convert', {
@@ -356,7 +296,7 @@ export function useConversion({ isElectron, showToast }: UseConversionOptions) {
             status: 'done'
           }
         });
-        triggerDownload(zipUrl, `anysvg_exports_${state.preset || `${state.scale}x`}.zip`);
+        triggerDownload(zipUrl, `anysvg_exports_${state.scale}x.zip`);
 
         showToast(`Batch completed: ${files.length} SVGs converted to ZIP!`);
 
@@ -380,7 +320,6 @@ export function useConversion({ isElectron, showToast }: UseConversionOptions) {
     bgColor: state.bgColor,
     format: state.format,
     compression: state.compression,
-    preset: state.preset,
     isConverting: state.isConverting,
     isConvertingAll: state.isConvertingAll,
     convertAllProgress: state.convertAllProgress,
@@ -393,7 +332,6 @@ export function useConversion({ isElectron, showToast }: UseConversionOptions) {
     setBgColor,
     setFormat,
     setCompression,
-    handlePresetChange,
     handleScaleChange,
     handleDimensionsChange,
     handleDimensionsReset,

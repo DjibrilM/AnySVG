@@ -46,22 +46,19 @@ export function DimensionInputs({
     }
   };
 
-  const maxSlider = Math.max(16, Math.ceil(scale));
-  const displayScale = Number(scale.toFixed(2));
-
   return (
     <div className="custom-dims-box">
       <div className="slider-block">
         <div className="slider-header">
           <span className="slider-title">Scale Factor</span>
-          <span className="slider-num font-mono">{displayScale}x</span>
+          <span className="slider-num">{scale}x</span>
         </div>
         <input
           type="range"
           min="1"
-          max={maxSlider}
+          max="8"
           step="0.5"
-          value={Math.min(scale, maxSlider)}
+          value={scale}
           onChange={(e) => onScaleChange(parseFloat(e.target.value))}
           className="shadcn-slider"
         />
@@ -74,9 +71,7 @@ export function DimensionInputs({
             type="number"
             value={currentW}
             onChange={handleWidthInput}
-            className="shadcn-input font-mono"
-            min="1"
-            max="16384"
+            className="shadcn-input"
           />
         </div>
 
@@ -95,9 +90,7 @@ export function DimensionInputs({
             type="number"
             value={currentH}
             onChange={handleHeightInput}
-            className="shadcn-input font-mono"
-            min="1"
-            max="16384"
+            className="shadcn-input"
           />
         </div>
       </div>
