@@ -6,6 +6,8 @@
 
 AnySVG is a desktop application built with Electron, React, and TypeScript designed to convert SVG vector graphics into high-resolution raster images (PNG and JPEG) with post-rasterization compression.
 
+https://github.com/user-attachments/assets/0a24b5e4-cf23-4b60-9435-851d300ce0ea
+
 ---
 
 ## How It Works
